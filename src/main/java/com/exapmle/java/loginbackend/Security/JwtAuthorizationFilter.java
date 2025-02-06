@@ -1,4 +1,4 @@
-package Security;
+package com.exapmle.java.loginbackend.Security;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
@@ -18,44 +18,40 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
+public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+        if (request.getServletPath().equals("/refreshToken")) {
+            filterChain.doFilter(request, response);
+        } else {
+            String authorizationToken = request.getHeader(JwtUtil.AUTH_HEADER);
+            if (authorizationToken != null && authorizationToken.startsWith(JwtUtil.PREFIX)) {
+                try {
+                    String jwt = authorizationToken.substring(JwtUtil.PREFIX.length());
+                    Algorithm algorithm = Algorithm.HMAC256(JwtUtil.SECRET);
+                    JWTVerifier jwtVerifier = JWT.require(algorithm).build();
+                    DecodedJWT decodedJWT = jwtVerifier.verify(jwt);
 
-    public class JwtAuthorizationFilter extends OncePerRequestFilter {
-        @Override
-        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-            if (request.getServletPath().equals("/refreshToken")) {
-                filterChain.doFilter(request, response);
-            } else {
-                String authorizationToken = request.getHeader(JwtUtil.AUTH_HEADER);
-                if (authorizationToken != null && authorizationToken.startsWith(JwtUtil.PREFIX)) {
-                    try {
-                        String jwt = authorizationToken.substring(JwtUtil.PREFIX.length());
-                        Algorithm algorithm = Algorithm.HMAC256(JwtUtil.SECRET);
-                        JWTVerifier jwtVerifier = JWT.require(algorithm).build();
-                        jwtVerifier.verify(jwt);
-                        DecodedJWT decodedJWT = jwtVerifier.verify(jwt);
-                        String username = decodedJWT.getSubject();
-                        String[] roles = decodedJWT.getClaim("roles").asArray(String.class);
-                        Collection<GrantedAuthority> authorities = new ArrayList<>();
-                        for (String r : roles) {
-                            authorities.add(new SimpleGrantedAuthority(r));
-                        }
-                        UsernamePasswordAuthenticationToken authenticationToken =
-                                new UsernamePasswordAuthenticationToken(username, null, authorities);
-                        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                        filterChain.doFilter(request, response);
-                    } catch (Exception e) {
-                        response.setHeader("error-message", e.getMessage());
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    String username = decodedJWT.getSubject();
+                    String[] roles = decodedJWT.getClaim("roles").asArray(String.class);
 
+                    Collection<GrantedAuthority> authorities = new ArrayList<>();
+                    for (String role : roles) {
+                        authorities.add(new SimpleGrantedAuthority(role));
                     }
 
-                } else {
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                     filterChain.doFilter(request, response);
-
+                } catch (Exception e) {
+                    response.setHeader("error-message", e.getMessage());
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 }
+            } else {
+                filterChain.doFilter(request, response);
             }
-
         }
     }
-
+}
