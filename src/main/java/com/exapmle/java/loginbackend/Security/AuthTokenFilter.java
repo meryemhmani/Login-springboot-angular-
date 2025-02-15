@@ -12,11 +12,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-
-public class AuthTokenFilter  extends OncePerRequestFilter {
+@Component
+public class AuthTokenFilter extends OncePerRequestFilter {
 
     @Autowired
     private jwtUtil jwtUtils;
@@ -34,26 +35,31 @@ public class AuthTokenFilter  extends OncePerRequestFilter {
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
 
+                // Charger les détails de l'utilisateur
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
+                // Créer une instance d'authentification avec les détails de l'utilisateur
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails,
                                 null,
                                 userDetails.getAuthorities());
 
+                // Ajouter des détails supplémentaires à l'authentification
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
+                // Définir l'authentification dans le contexte de sécurité
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
             logger.error("Cannot set user authentication: {}", e);
         }
 
+        // Passer la requête à la chaîne de filtres suivante
         filterChain.doFilter(request, response);
     }
 
+    // Méthode pour extraire le JWT du cookie
     private String parseJwt(HttpServletRequest request) {
-        String jwt = jwtUtils.getJwtFromCookies(request);
-        return jwt;
+        return jwtUtils.getJwtFromCookies(request);  // Récupérer le JWT depuis le cookie
     }
 }

@@ -15,27 +15,25 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public Long userId() {
-        return 123L; // Remplacez par la valeur appropriée
-    }
-    @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        // Assurez-vous de configurer un AuthenticationManager personnalisé si nécessaire
+        // Crée un AuthenticationManager basé sur la configuration de sécurité fournie par Spring Security.
         return http.getSharedObject(AuthenticationManagerBuilder.class)
                 .build();
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
+        // Utilisation de BCrypt pour encoder les mots de passe.
         return new BCryptPasswordEncoder();
     }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf().disable()
+                .csrf().disable()  // Désactivation de la protection CSRF, car elle n'est pas nécessaire pour les API REST.
                 .authorizeRequests()
-                .requestMatchers("/login", "/register").permitAll()
-                .anyRequest().authenticated();
+                .requestMatchers("/login", "/register").permitAll() // Autorisation d'accès public pour les routes de connexion et d'inscription.
+                .anyRequest().authenticated();  // Toute autre requête doit être authentifiée.
         return http.build();
     }
-
 }
